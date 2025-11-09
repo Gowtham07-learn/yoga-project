@@ -1,0 +1,29 @@
+:root {
+  --bg: #f6fbf8;
+  --card: #ffffff;
+  --muted: #6c757d;
+  --accent: #a8e6b9;
+  --accent-2: #7fdc99;
+  --radius: 14px;
+  --shadow: 0 6px 20px rgba(20,30,40,0.06);
+  --accent-text: #134b33;
+  font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  height: 100%;
+  margin: 0;
+  background: linear-gradient(180deg,#f2faf5,#f6fbf8);
+}
+
+#root {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}

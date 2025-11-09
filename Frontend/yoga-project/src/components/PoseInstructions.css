@@ -1,0 +1,101 @@
+.pose-instruction-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.3s ease-out;
+}
+
+.pose-instruction-card {
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: 20px;
+  width: 90%;
+  max-width: 400px;
+  box-shadow: var(--shadow);
+  animation: slideUp 0.3s ease-out;
+}
+
+.instruction-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+  color: var(--accent-text);
+}
+
+.instruction-header h3 {
+  margin: 0;
+  font-size: 1.2em;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 24px;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 0;
+  margin: 0;
+  line-height: 1;
+}
+
+.instruction-content {
+  color: #333;
+  margin-bottom: 20px;
+  line-height: 1.5;
+}
+
+.acknowledge-btn {
+  width: 100%;
+  background: linear-gradient(180deg, var(--accent-2), var(--accent));
+  border: none;
+  padding: 12px;
+  border-radius: 8px;
+  color: var(--accent-text);
+  font-weight: bold;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.acknowledge-btn:hover {
+  transform: translateY(-1px);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { 
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to { 
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Responsive adjustments */
+@media (max-width: 480px) {
+  .pose-instruction-card {
+    width: 95%;
+    padding: 15px;
+  }
+  
+  .instruction-header h3 {
+    font-size: 1.1em;
+  }
+  
+  .instruction-content {
+    font-size: 0.95em;
+  }
+}
