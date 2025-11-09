@@ -11,7 +11,8 @@ const LevelScreen = ({
   onBeginPose,
   onRetryLevel,
   showStartCamera,
-  poseFeedback = []
+  poseFeedback = [],
+  onVideoLoad
 }) => {
   const videoRef = useRef(null);
   const overlayRef = useRef(null);
@@ -23,6 +24,11 @@ const LevelScreen = ({
       console.log('Feedback:', feedbackMessage); // Log feedback instead of setting state
     }
   }, [poseFeedback, liveSim]);
+
+  // notify parent about video element so camera can be started with the exact DOM node
+  useEffect(() => {
+    if (onVideoLoad && videoRef.current) onVideoLoad(videoRef.current);
+  }, [onVideoLoad]);
 
   return (
     <section id="levelScreen">
@@ -43,12 +49,13 @@ const LevelScreen = ({
 
           <div className="media-wrap">
             <video
+              id="videoElement"
               ref={videoRef}
               autoPlay
               playsInline
               muted
             />
-            <canvas ref={overlayRef} />
+            <canvas id="overlay" ref={overlayRef} />
           </div>
 
           <div className="card-actions">
