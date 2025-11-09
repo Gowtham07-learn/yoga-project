@@ -1,0 +1,281 @@
+.container {
+  max-width: 1100px;
+  margin: 26px auto;
+  padding: 16px;
+}
+
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+h1 {
+  margin: 0;
+  color: var(--accent-text);
+  letter-spacing: 0.5px;
+}
+
+.subtitle {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+:root {
+  --bg: #f6fbf8;
+  --card: #ffffff;
+  --muted: #6c757d;
+  --accent: #a8e6b9;
+  --accent-2: #7fdc99;
+  --radius: 14px;
+  --shadow: 0 6px 20px rgba(20,30,40,0.06);
+  --accent-text: #134b33;
+  font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+  margin: 0;
+  background: linear-gradient(180deg,#f2faf5,#f6fbf8);
+}
+
+/* Landing */
+.landing {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 60vh;
+  gap: 10px;
+}
+
+.start-btn {
+  background: linear-gradient(180deg,var(--accent-2),var(--accent));
+  border: none;
+  padding: 14px 28px;
+  border-radius: 999px;
+  font-size: 18px;
+  color: #033;
+  cursor: pointer;
+  box-shadow: var(--shadow);
+}
+
+/* general card */
+.card {
+  background: var(--card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 12px;
+}
+
+.hidden {
+  display: none;
+}
+
+/* Level header */
+.level-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.level-title {
+  font-weight: 700;
+  color: #234;
+  font-size: 18px;
+}
+
+.level-hint {
+  color: var(--muted);
+}
+
+/* portrait layout row */
+.portrait-row {
+  display: flex;
+  gap: 80px;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+.portrait {
+  width: 45%;
+  min-height: 560px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* card head */
+.card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.card-title {
+  font-weight: 700;
+  color: #246b4a;
+}
+
+.tiny {
+  font-size: 12px;
+}
+
+/* video & overlay: portrait dimensions */
+.media-wrap {
+  position: relative;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #111;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#videoElement {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+#overlay {
+  position: absolute;
+  left: 0;
+  top: 0;
+  pointer-events: none;
+}
+
+/* reference image */
+.ref-wrap {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ref-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 8px;
+}
+
+/* actions and controls */
+.card-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.btn {
+  background: #f0f0f0;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.countdown {
+  font-weight: 700;
+  color: var(--accent-text);
+}
+
+.status {
+  font-size: 13px;
+  color: var(--muted);
+  text-align: right;
+}
+
+/* angles list under reference */
+.angles-list {
+  margin-top: 8px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+/* score card */
+.score {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 20px;
+}
+
+.score-number {
+  font-size: 44px;
+  font-weight: 800;
+  color: #123;
+}
+
+.classification {
+  padding: 8px 14px;
+  border-radius: 999px;
+  color: white;
+  font-weight: 700;
+}
+
+.score-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+/* final */
+.final {
+  padding: 20px;
+  text-align: center;
+}
+
+.final-title {
+  font-weight: 800;
+  color: #245d43;
+}
+
+.final-score {
+  font-size: 40px;
+  font-weight: 800;
+  color: #184b34;
+}
+
+.final-badge {
+  margin-top: 8px;
+  padding: 10px;
+  border-radius: 8px;
+  background: linear-gradient(180deg,#e7ffee,#d4fbe0);
+  color: #093;
+  font-weight: 700;
+}
+
+/* responsive */
+@media (max-width: 820px) {
+  .portrait {
+    width: 48%;
+    min-height: 520px;
+  }
+}
+
+@media (max-width: 520px) {
+  .portrait {
+    width: 100%;
+    min-height: 420px;
+  }
+  .portrait-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
