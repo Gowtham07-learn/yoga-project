@@ -46,6 +46,12 @@ export default function initPoseYoga(){
   const restartAllBtn = document.getElementById('restartAllBtn');
   const downloadBtn = document.getElementById('downloadBtn');
 
+  // lightweight hint popup (toast)
+  const hintBox = document.createElement('div');
+  hintBox.id = 'hintToast';
+  hintBox.className = 'hint-toast hidden';
+  document.body.appendChild(hintBox);
+
   // --- state
   let currentLevelIndex = 0;
   let pose = null;
@@ -60,6 +66,7 @@ export default function initPoseYoga(){
   let jointCountAcc = {};
   let results = [];
   const holdRequirementPct = 0.70;
+  let lastHintAt = 0;
 
   // canvas context
   const ctx = overlay.getContext('2d');
@@ -133,6 +140,35 @@ export default function initPoseYoga(){
     return {label:'Poor', color:'#eb6b5a'};
   }
 
+  // --- hint helpers ---
+  function humanizeJoint(key){
+    return key
+      .replace('L','Left ')
+      .replace('R','Right ')
+      .replace('Shoulder','Shoulder')
+      .replace('Elbow','Elbow')
+      .replace('Hip','Hip')
+      .replace('Knee','Knee');
+  }
+  function hintForJoint(key, current, target){
+    if(typeof current !== 'number' || typeof target !== 'number') return '';
+    const delta = Math.round(target - current);
+    if(Math.abs(delta) < 6) return '';
+    // tailor a few joints
+    let verb = 'adjust';
+    if(/Knee/.test(key)) verb = delta > 0 ? 'bend' : 'straighten';
+    if(/Elbow/.test(key)) verb = delta > 0 ? 'bend' : 'straighten';
+    if(/Shoulder/.test(key)) verb = delta > 0 ? 'raise' : 'lower';
+    return `${humanizeJoint(key)} — ${verb} by ~${Math.abs(delta)}°`;
+  }
+  function showHint(text){
+    if(!text) return;
+    hintBox.textContent = text;
+    hintBox.classList.remove('hidden');
+    setTimeout(()=>{ hintBox.classList.add('hidden'); }, 1800);
+    lastHintAt = Date.now();
+  }
+
   function drawPoseOnCanvas(landmarks){
     overlay.width = videoElement.videoWidth || videoElement.clientWidth || overlay.clientWidth;
     overlay.height = videoElement.videoHeight || videoElement.clientHeight || overlay.clientHeight;
@@ -182,6 +218,24 @@ export default function initPoseYoga(){
       if(simRolling.length > frameSmoothing) simRolling.shift();
       const smooth = simRolling.reduce((a,b)=>a+b,0) / simRolling.length;
       framesSimilarity.push(smooth);
+
+      // show corrective hint if needed (rate limited)
+      if(Date.now() - lastHintAt > 1800){
+        // find worst joint right now
+        let worstKey = null; let worst = -1;
+        for(const k in simData.map){
+          const d = simData.map[k].diff;
+          if(d > worst){ worst = d; worstKey = k; }
+        }
+        if(worstKey){
+          const target = (LEVELS[currentLevelIndex].angles[worstKey]);
+          const current = angles[worstKey];
+          const text = hintForJoint(worstKey, current, target);
+          if(smooth < 0.6 || worst > (LEVELS[currentLevelIndex].tolerances[worstKey]||40)){
+            showHint(text);
+          }
+        }
+      }
       totalFrames++;
       if(smooth >= 0.70) inPoseFrames++;
       liveSim.textContent = Math.round(smooth * 100);
