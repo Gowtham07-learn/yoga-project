@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>poseyoga — Prototype</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div>
+        <h1>PoseYoga</h1>
+        <div class="subtitle">Levels • Hold 30s • Light-green, friendly UI</div>
+      </div>
+      <div class="subtitle">Relaxed practice • AI-assisted</div>
+    </header>
+
+    <main id="app">
+      <!-- Landing -->
+      <section class="landing" id="landing">
+        <h2>PoseYoga </h2>
+        <p class="muted">Warm, healthy posture practice — 5 progressive levels</p>
+        <button id="startBtn" class="start-btn">Start</button>
+      </section>
+
+      <!-- Level screen -->
+      <section id="levelScreen" class="hidden">
+        <div class="level-header">
+          <div class="level-title">Level <span id="levelNumber">1</span></div>
+          <div class="level-hint" id="levelHint">Hold the pose for 30s • Keep steady</div>
+        </div>
+
+        <div class="portrait-row">
+          <!-- Webcam card (portrait)
+               Video is tall narrower width to capture full body -->
+          <div class="card portrait">
+            <div class="card-head">
+              <div class="card-title">Your Camera</div>
+              <div class="status">
+                <div>Similarity: <span id="liveSim">—</span>%</div>
+                <div>Hold: <span id="holdPct">0</span>%</div>
+              </div>
+            </div>
+
+            <div class="media-wrap">
+              <video id="videoElement" autoplay playsinline muted></video>
+              <canvas id="overlay"></canvas>
+            </div>
+
+            <div class="card-actions">
+              <button id="startCamBtn" class="btn">Start Camera</button>
+              <button id="beginPoseBtn" class="btn">Begin (3s)</button>
+              <button id="retryLevelBtn" class="btn">Reset</button>
+              <div class="countdown" id="countdownLabel">Ready</div>
+            </div>
+          </div>
+
+          <!-- Reference card (portrait) -->
+          <div class="card portrait">
+            <div class="card-head">
+              <div class="card-title">Reference Pose</div>
+              <div class="tiny muted" id="refName">Pose name</div>
+            </div>
+
+            <div class="ref-wrap">
+              <img id="refImage" class="ref-img" src="" alt="Reference pose" />
+            </div>
+
+            <div class="card-body">
+              <div id="refDesc" class="muted">Instruction text</div>
+              <div class="angles-list" id="anglesList"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Score Screen -->
+      <section id="scoreScreen" class="hidden">
+        <div class="card score">
+          <div class="score-title">Level <span id="scoreLevel">1</span> — Score</div>
+          <div class="score-number" id="levelScore">0</div>
+          <div id="scoreLabel" class="classification">—</div>
+          <div id="feedbackText" class="muted">Feedback</div>
+
+          <div class="score-actions">
+            <button id="nextBtn" class="next-btn">Next Level</button>
+            <button id="retryBtn" class="btn">Retry Level</button>
+            <button id="exitBtn" class="btn">Exit</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Final Screen -->
+      <section id="finalScreen" class="hidden">
+        <div class="card final">
+          <div class="final-title">All Levels Complete</div>
+          <div class="final-score" id="finalScore">0</div>
+          <div id="finalLabel" class="final-badge">—</div>
+
+          <div style="margin-top:12px">
+            <button id="restartAllBtn" class="next-btn">Restart</button>
+            <button id="downloadBtn" class="btn">Download Results</button>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="muted">Prototype — runs in browser. No camera data leaves your device.</footer>
+  </div>
+
+  <!-- MediaPipe (CDN) -->
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
+
+  <!-- App JS -->
+  <script src="script.js"></script>
+</body>
+</html>
