@@ -4,7 +4,8 @@ import initPoseYoga from './poseyoga'
 
 function App() {
   useEffect(() => {
-    initPoseYoga()
+    const cleanup = initPoseYoga()
+    return cleanup
   }, [])
 
   return (

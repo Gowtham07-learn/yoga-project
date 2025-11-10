@@ -67,6 +67,9 @@ export default function initPoseYoga(){
   let results = [];
   const holdRequirementPct = 0.70;
   let lastHintAt = 0;
+  // timers for cleanup
+  let readyTimerId = null;
+  let runTimerId = null;
 
   // canvas context
   const ctx = overlay.getContext('2d');
@@ -170,8 +173,12 @@ export default function initPoseYoga(){
   }
 
   function drawPoseOnCanvas(landmarks){
-    overlay.width = videoElement.videoWidth || videoElement.clientWidth || overlay.clientWidth;
-    overlay.height = videoElement.videoHeight || videoElement.clientHeight || overlay.clientHeight;
+    const desiredW = videoElement.videoWidth || videoElement.clientWidth || overlay.clientWidth;
+    const desiredH = videoElement.videoHeight || videoElement.clientHeight || overlay.clientHeight;
+    if (overlay.width !== desiredW || overlay.height !== desiredH) {
+      overlay.width = desiredW;
+      overlay.height = desiredH;
+    }
     ctx.clearRect(0,0,overlay.width, overlay.height);
 
     if(!landmarks || landmarks.length === 0) return;
@@ -295,19 +302,24 @@ export default function initPoseYoga(){
     resetLevelState();
     let t = 3;
     countdownLabel.textContent = `Get ready: ${t}`;
-    const readyTimer = setInterval(()=>{
+    if (readyTimerId) { clearInterval(readyTimerId); readyTimerId = null; }
+    readyTimerId = setInterval(()=>{
       t--;
-      if(t>0) countdownLabel.textContent = `Get ready: ${t}`;
-      else {
-        clearInterval(readyTimer);
+      if(t>0) {
+        countdownLabel.textContent = `Get ready: ${t}`;
+      } else {
+        clearInterval(readyTimerId);
+        readyTimerId = null;
         const RUN_MS = 30000;
         const start = Date.now();
         activeRun = true;
-        const runTimer = setInterval(()=>{
+        if (runTimerId) { clearInterval(runTimerId); runTimerId = null; }
+        runTimerId = setInterval(()=>{
           const remaining = Math.max(0, RUN_MS - (Date.now() - start));
           countdownLabel.textContent = `Hold: ${Math.ceil(remaining/1000)}s`;
           if(remaining <= 0){
-            clearInterval(runTimer);
+            clearInterval(runTimerId);
+            runTimerId = null;
             activeRun = false;
             countdownLabel.textContent = 'Done';
             setTimeout(()=> finishLevelRun(), 300);
@@ -397,23 +409,65 @@ export default function initPoseYoga(){
     document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
   }
 
-  // UI events wiring
-  startBtn?.addEventListener('click', ()=>{ landing.classList.add('hidden'); currentLevelIndex = 0; results = []; showLevelScreen(); });
-  startCamBtn?.addEventListener('click', startCamera);
-  beginPoseBtn?.addEventListener('click', startPoseRun);
-  retryLevelBtn?.addEventListener('click', resetLevelState);
-  nextBtn?.addEventListener('click', goToNextLevel);
-  retryBtn?.addEventListener('click', retryLevel);
-  exitBtn?.addEventListener('click', ()=>{ stopCamera(); levelScreen.classList.add('hidden'); scoreScreen.classList.add('hidden'); finalScreen.classList.add('hidden'); landing.classList.remove('hidden'); startCamBtn.style.display = 'inline-block'; });
-  restartAllBtn?.addEventListener('click', ()=>{ results = []; currentLevelIndex = 0; finalScreen.classList.add('hidden'); landing.classList.remove('hidden'); stopCamera(); });
-  downloadBtn?.addEventListener('click', downloadResults);
+  // UI events wiring (keep refs so we can clean up)
+  const onStartClick = () => { landing.classList.add('hidden'); currentLevelIndex = 0; results = []; showLevelScreen(); };
+  const onStartCamClick = () => { startCamera(); };
+  const onBeginPoseClick = () => { startPoseRun(); };
+  const onRetryLevelClick = () => { resetLevelState(); };
+  const onNextClick = () => { goToNextLevel(); };
+  const onRetryClick = () => { retryLevel(); };
+  const onExitClick = () => { stopCamera(); levelScreen.classList.add('hidden'); scoreScreen.classList.add('hidden'); finalScreen.classList.add('hidden'); landing.classList.remove('hidden'); startCamBtn.style.display = 'inline-block'; };
+  const onRestartAllClick = () => { results = []; currentLevelIndex = 0; finalScreen.classList.add('hidden'); landing.classList.remove('hidden'); stopCamera(); };
+  const onDownloadClick = () => { downloadResults(); };
+
+  startBtn?.addEventListener('click', onStartClick);
+  startCamBtn?.addEventListener('click', onStartCamClick);
+  beginPoseBtn?.addEventListener('click', onBeginPoseClick);
+  retryLevelBtn?.addEventListener('click', onRetryLevelClick);
+  nextBtn?.addEventListener('click', onNextClick);
+  retryBtn?.addEventListener('click', onRetryClick);
+  exitBtn?.addEventListener('click', onExitClick);
+  restartAllBtn?.addEventListener('click', onRestartAllClick);
+  downloadBtn?.addEventListener('click', onDownloadClick);
 
   // video metadata sizing
-  videoElement?.addEventListener('loadedmetadata', ()=>{
+  const onLoadedMeta = () => {
     overlay.width = videoElement.videoWidth;
     overlay.height = videoElement.videoHeight;
-  });
+  };
+  videoElement?.addEventListener('loadedmetadata', onLoadedMeta);
 
   // pre-load model (no camera start)
   setupPose().catch(()=>{});
+
+  // return cleanup for React unmounts
+  return () => {
+    // clear timers
+    if (readyTimerId) { clearInterval(readyTimerId); readyTimerId = null; }
+    if (runTimerId) { clearInterval(runTimerId); runTimerId = null; }
+    // stop camera/pose
+    stopCamera();
+    try { if (pose && pose.close) pose.close(); } catch { /* noop */ }
+    pose = null;
+    // remove event listeners
+    startBtn?.removeEventListener('click', onStartClick);
+    startCamBtn?.removeEventListener('click', onStartCamClick);
+    beginPoseBtn?.removeEventListener('click', onBeginPoseClick);
+    retryLevelBtn?.removeEventListener('click', onRetryLevelClick);
+    nextBtn?.removeEventListener('click', onNextClick);
+    retryBtn?.removeEventListener('click', onRetryClick);
+    exitBtn?.removeEventListener('click', onExitClick);
+    restartAllBtn?.removeEventListener('click', onRestartAllClick);
+    downloadBtn?.removeEventListener('click', onDownloadClick);
+    videoElement?.removeEventListener('loadedmetadata', onLoadedMeta);
+    // remove hint element
+    try { hintBox?.remove(); } catch { /* noop */ }
+    // reset UI visibility
+    levelScreen?.classList.add('hidden');
+    scoreScreen?.classList.add('hidden');
+    finalScreen?.classList.add('hidden');
+    landing?.classList.remove('hidden');
+    // allow re-init later
+    window.__poseyoga_inited_once = false;
+  };
 }
