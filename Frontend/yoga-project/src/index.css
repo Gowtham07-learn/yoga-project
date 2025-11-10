@@ -31,8 +31,8 @@ h1{margin:0;color:var(--accent-text);letter-spacing:0.5px}
 .level-hint{color:var(--muted)}
 
 /* portrait layout row */
-.portrait-row{display:flex;gap:80px;align-items:flex-start;flex-wrap:wrap}
-.portrait{width:45%;min-height:560px;padding:12px;display:flex;flex-direction:column;gap:8px}
+.portrait-row{display:flex;gap:20px;align-items:flex-start;flex-wrap:wrap}
+.portrait{width:380px;max-width:48%;min-height:480px;padding:12px;display:flex;flex-direction:column;gap:8px}
 
 /* card head */
 .card-head{display:flex;justify-content:space-between;align-items:center}

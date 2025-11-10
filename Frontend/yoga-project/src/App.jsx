@@ -1,10 +1,18 @@
 import { useEffect } from 'react'
 import './index.css'
 import initPoseYoga from './poseyoga'
+import initPoseYogaKinect from './poseyoga_kinect'
 
 function App() {
   useEffect(() => {
-    initPoseYoga()
+    // Check if running in Electron with Kinect support
+    if (window.kinectAPI) {
+      console.log('🎮 Running in Kinect mode');
+      initPoseYogaKinect();
+    } else {
+      console.log('📷 Running in Webcam mode');
+      initPoseYoga();
+    }
   }, [])
 
   return (
@@ -20,9 +28,44 @@ function App() {
       <main id="app">
         {/* Landing */}
         <section className="landing" id="landing">
-          <h2>PoseYoga </h2>
-          <p className="muted">Warm, healthy posture practice — 5 progressive levels</p>
-          <button id="startBtn" className="start-btn">Start</button>
+          <div className="landing-hero">
+            <div className="yoga-icon">🧘‍♀️</div>
+            <h2>PoseYoga</h2>
+            <p className="hero-description">Master yoga poses with AI-powered guidance</p>
+            
+            {/* Benefits carousel */}
+            <div className="benefits-carousel">
+              <div className="benefit-card active">
+                <span className="benefit-icon">✨</span>
+                <span>Perfect Your Posture</span>
+              </div>
+              <div className="benefit-card">
+                <span className="benefit-icon">🎯</span>
+                <span>Real-time Feedback</span>
+              </div>
+              <div className="benefit-card">
+                <span className="benefit-icon">📈</span>
+                <span>Track Progress</span>
+              </div>
+              <div className="benefit-card">
+                <span className="benefit-icon">🏆</span>
+                <span>5 Progressive Levels</span>
+              </div>
+            </div>
+            
+            <button id="startBtn" className="start-btn">
+              <span className="btn-icon">🚀</span>
+              Begin Your Journey
+            </button>
+            
+            {/* Floating yoga poses */}
+            <div className="floating-poses">
+              <div className="pose-float pose-1">🕉️</div>
+              <div className="pose-float pose-2">🌸</div>
+              <div className="pose-float pose-3">🍃</div>
+              <div className="pose-float pose-4">💫</div>
+            </div>
+          </div>
         </section>
 
         {/* Level screen */}
@@ -106,7 +149,6 @@ function App() {
         </section>
       </main>
 
-      <footer className="muted">Prototype — runs in browser. No camera data leaves your device.</footer>
     </div>
   )
 }

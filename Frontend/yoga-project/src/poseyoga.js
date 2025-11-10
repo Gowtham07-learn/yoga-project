@@ -3,6 +3,33 @@ export default function initPoseYoga(){
   if (window.__poseyoga_inited_once) return; // avoid double wiring
   window.__poseyoga_inited_once = true;
 
+  // ----- Benefit Cards Carousel Animation -----
+  function animateBenefitCards(){
+    const cards = document.querySelectorAll('.benefit-card');
+    if(!cards.length) return;
+    
+    let activeIndex = 0;
+    setInterval(() => {
+      cards.forEach((card, idx) => {
+        if(idx === activeIndex){
+          card.style.transform = 'translateY(-5px) scale(1.05)';
+          card.style.boxShadow = '0 8px 25px rgba(168, 230, 185, 0.5)';
+        } else {
+          card.style.transform = 'translateY(0) scale(1)';
+          card.style.boxShadow = '0 4px 15px rgba(0,0,0,0.08)';
+        }
+      });
+      activeIndex = (activeIndex + 1) % cards.length;
+    }, 2000);
+  }
+  
+  // Run carousel animation on landing
+  setTimeout(() => {
+    if(landing && !landing.classList.contains('hidden')){
+      animateBenefitCards();
+    }
+  }, 500);
+
   // ----- Levels -----
   const LEVELS = [
     { id:1, name:"Tree Pose (Vrksāsana)", image:"https://cdn.yogajournal.com/wp-content/uploads/2022/01/Tree-Pose_Alt-1_2400x1350_Andrew-Clark.jpeg", desc:"Stand on one leg; keep torso upright; hands overhead.", angles:{ LShoulder:50,RShoulder:50,LElbow:170,RElbow:170,LHip:180,RHip:170,LKnee:175,RKnee:15 }, tolerances:{ LShoulder:35,RShoulder:35,LElbow:30,RElbow:30,LHip:30,RHip:35,LKnee:25,RKnee:40 }, weights:{ LShoulder:1,RShoulder:1,LElbow:1,RElbow:1,LHip:1,RHip:1,LKnee:1,RKnee:1 } },

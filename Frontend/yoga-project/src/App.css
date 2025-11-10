@@ -54,19 +54,201 @@ html, body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  height: 60vh;
-  gap: 10px;
+  min-height: 70vh;
+  position: relative;
+  overflow: hidden;
 }
 
-.start-btn {
-  background: linear-gradient(180deg,var(--accent-2),var(--accent));
-  border: none;
-  padding: 14px 28px;
-  border-radius: 999px;
+.landing-hero {
+  text-align: center;
+  z-index: 2;
+  animation: fadeInUp 0.8s ease-out;
+}
+
+.yoga-icon {
+  font-size: 80px;
+  margin-bottom: 20px;
+  animation: float 3s ease-in-out infinite;
+}
+
+.landing h2 {
+  font-size: 48px;
+  margin: 10px 0;
+  background: linear-gradient(135deg, #2d7f5e, #6bc297);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.hero-description {
   font-size: 18px;
-  color: #033;
+  color: var(--muted);
+  margin: 10px 0 30px;
+}
+
+/* Benefits Carousel */
+.benefits-carousel {
+  display: flex;
+  gap: 15px;
+  margin: 30px 0;
+  flex-wrap: wrap;
+  justify-content: center;
+  max-width: 800px;
+}
+
+.benefit-card {
+  background: white;
+  padding: 15px 25px;
+  border-radius: 20px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  transition: all 0.3s ease;
+  animation: slideIn 0.6s ease-out forwards;
+  opacity: 0;
+}
+
+.benefit-card:nth-child(1) { animation-delay: 0.1s; }
+.benefit-card:nth-child(2) { animation-delay: 0.2s; }
+.benefit-card:nth-child(3) { animation-delay: 0.3s; }
+.benefit-card:nth-child(4) { animation-delay: 0.4s; }
+
+.benefit-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 25px rgba(168, 230, 185, 0.4);
+  background: linear-gradient(135deg, #f6fbf8, #e7f5ed);
+}
+
+.benefit-icon {
+  font-size: 24px;
+}
+
+.benefit-card span:last-child {
+  font-weight: 600;
+  color: var(--accent-text);
+  font-size: 14px;
+}
+
+/* Enhanced Start Button */
+.start-btn {
+  background: linear-gradient(135deg, #6bc297, #2d7f5e);
+  border: none;
+  padding: 18px 40px;
+  border-radius: 999px;
+  font-size: 20px;
+  font-weight: 700;
+  color: white;
   cursor: pointer;
-  box-shadow: var(--shadow);
+  box-shadow: 0 8px 20px rgba(45, 127, 94, 0.3);
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.start-btn:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 30px rgba(45, 127, 94, 0.4);
+  background: linear-gradient(135deg, #7fd6a8, #256d50);
+}
+
+.start-btn:active {
+  transform: translateY(-1px);
+}
+
+.btn-icon {
+  font-size: 24px;
+}
+
+/* Floating Yoga Elements */
+.floating-poses {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.pose-float {
+  position: absolute;
+  font-size: 40px;
+  opacity: 0.15;
+  animation: floatAround 20s ease-in-out infinite;
+}
+
+.pose-1 {
+  top: 10%;
+  left: 10%;
+  animation-delay: 0s;
+}
+
+.pose-2 {
+  top: 20%;
+  right: 15%;
+  animation-delay: 5s;
+}
+
+.pose-3 {
+  bottom: 20%;
+  left: 15%;
+  animation-delay: 10s;
+}
+
+.pose-4 {
+  bottom: 15%;
+  right: 10%;
+  animation-delay: 15s;
+}
+
+/* Animations */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-20px);
+  }
+}
+
+@keyframes floatAround {
+  0%, 100% {
+    transform: translate(0, 0) rotate(0deg);
+  }
+  25% {
+    transform: translate(30px, -30px) rotate(90deg);
+  }
+  50% {
+    transform: translate(-20px, -50px) rotate(180deg);
+  }
+  75% {
+    transform: translate(-40px, -20px) rotate(270deg);
+  }
 }
 
 /* general card */
@@ -102,14 +284,15 @@ html, body {
 /* portrait layout row */
 .portrait-row {
   display: flex;
-  gap: 80px;
+  gap: 20px;
   align-items: flex-start;
   flex-wrap: wrap;
 }
 
 .portrait {
-  width: 45%;
-  min-height: 560px;
+  width: 380px;
+  max-width: 48%;
+  min-height: 480px;
   padding: 12px;
   display: flex;
   flex-direction: column;
@@ -267,6 +450,23 @@ html, body {
     width: 48%;
     min-height: 520px;
   }
+  
+  .landing h2 {
+    font-size: 36px;
+  }
+  
+  .yoga-icon {
+    font-size: 60px;
+  }
+  
+  .benefits-carousel {
+    gap: 10px;
+  }
+  
+  .benefit-card {
+    padding: 12px 20px;
+    font-size: 13px;
+  }
 }
 
 @media (max-width: 520px) {
@@ -277,5 +477,32 @@ html, body {
   .portrait-row {
     flex-direction: column;
     align-items: stretch;
+  }
+  
+  .landing h2 {
+    font-size: 32px;
+  }
+  
+  .yoga-icon {
+    font-size: 50px;
+  }
+  
+  .benefits-carousel {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .benefit-card {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .start-btn {
+    padding: 16px 32px;
+    font-size: 18px;
+  }
+  
+  .pose-float {
+    font-size: 30px;
   }
 }
