@@ -42,3 +42,37 @@ export const poseAngles = (landmarks) => {
   }
   return angles;
 };
+
+// Compute similarity across joints, returning both the per-joint diffs and an overall score in 0..1
+export const computeSimilarityMap = (detectedAngles, levelRef) => {
+  const perJoint = {};
+  let totalWeight = 0;
+  let weightedSum = 0;
+
+  for (const key in levelRef.angles) {
+    const target = levelRef.angles[key];
+    const tolerance = (levelRef.tolerances && levelRef.tolerances[key]) || 40;
+    const weight = (levelRef.weights && levelRef.weights[key]) || 1;
+    const value = detectedAngles[key];
+
+    if (typeof value === 'number' && typeof target === 'number') {
+      const diff = Math.abs(value - target);
+      const similarity = Math.max(0, 1 - diff / Math.max(1, tolerance));
+
+      perJoint[key] = { target, value, diff: Math.round(diff), similarity };
+      totalWeight += weight;
+      weightedSum += similarity * weight;
+    }
+  }
+
+  const overall = totalWeight > 0 ? weightedSum / totalWeight : 0;
+  return { overall, map: perJoint };
+};
+
+// Map numeric score to label and color for badges
+export const classifyScore = (score) => {
+  if (score >= 85) return { label: 'Excellent', color: '#20c997' };
+  if (score >= 70) return { label: 'Good', color: '#51cf66' };
+  if (score >= 55) return { label: 'Fair', color: '#fab005' };
+  return { label: 'Try Again', color: '#fa5252' };
+};
