@@ -6,6 +6,7 @@ import Landing from './components/Landing';
 import LevelScreen from './components/LevelScreen';
 import ScoreScreen from './components/ScoreScreen';
 import FinalScreen from './components/FinalScreen';
+import ExploreScreen from './components/ExploreScreen';
 import './App.css';
 
 function App() {
@@ -21,6 +22,15 @@ function App() {
   const [countdownLabel, setCountdownLabel] = useState('Ready');
   const [isCountingDown, setIsCountingDown] = useState(false);
   const [liveTips, setLiveTips] = useState('');
+  const [playMode, setPlayMode] = useState('sequence'); // sequence, explore, single
+  const [runProgress, setRunProgress] = useState(0);
+
+  // Refs to avoid stale closures inside onResults
+  const activeRunRef = useRef(false);
+  const levelIndexRef = useRef(0);
+  const simSumRef = useRef(0);
+  const frameCountRef = useRef(0);
+  const inPoseCountRef = useRef(0);
   
   // State for tracking pose data
   const [framesSimilarity, setFramesSimilarity] = useState([]);
@@ -51,6 +61,50 @@ function App() {
     const angles = poseAngles(results.poseLandmarks);
     const levelRef = LEVELS[currentLevelIndex];
     const simData = computeSimilarityMap(angles, levelRef);
+
+    // draw skeleton overlay (no external utils)
+    const canvas = document.getElementById('overlay');
+    if (canvas && results.poseLandmarks) {
+      const ctx = canvas.getContext('2d');
+      const W = canvas.width;
+      const H = canvas.height;
+      ctx.clearRect(0, 0, W, H);
+
+      // minimal set of connections for upper/lower body
+      const C = [
+        [11,12], // shoulders
+        [23,24], // hips
+        [11,23], // left side
+        [12,24], // right side
+        [11,13],[13,15], // left arm
+        [12,14],[14,16], // right arm
+        [23,25],[25,27], // left leg
+        [24,26],[26,28]  // right leg
+      ];
+
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = '#3b82f6';
+      ctx.lineCap = 'round';
+      for (const [a,b] of C) {
+        const p = results.poseLandmarks[a];
+        const q = results.poseLandmarks[b];
+        if (!p || !q) continue;
+        ctx.beginPath();
+        ctx.moveTo(p.x * W, p.y * H);
+        ctx.lineTo(q.x * W, q.y * H);
+        ctx.stroke();
+      }
+
+      ctx.fillStyle = '#60a5fa';
+      const points = [11,12,13,14,15,16,23,24,25,26,27,28];
+      for (const i of points) {
+        const p = results.poseLandmarks[i];
+        if (!p) continue;
+        ctx.beginPath();
+        ctx.arc(p.x * W, p.y * H, 3, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
     
     // Update current pose data for feedback
     setCurrentPoseData({
@@ -214,6 +268,13 @@ function App() {
     setCountdownLabel('Ready');
     setLiveSim('—');
     setHoldPct('0');
+    setRunProgress(0);
+    // reset live averaging windows
+    liveWindowRef.current = { startMs: 0, sums: {} };
+    // reset scoring refs
+    simSumRef.current = 0;
+    frameCountRef.current = 0;
+    inPoseCountRef.current = 0;
   }, []);
 
   const finishLevelRun = useCallback(() => {
@@ -233,7 +294,32 @@ function App() {
     }
     const sorted = Object.keys(avgDiffs).sort((a,b) => avgDiffs[b]-avgDiffs[a]);
     const top3 = sorted.slice(0,3).map(k => `${k.replace(/([A-Z])/g,' $1')}: ${Math.round(avgDiffs[k])}°`);
-    const feedback = top3.length ? top3.join(' • ') : "Nice hold!";
+    
+    // Generate summary based on score classification
+    const classification = classifyScore(finalScore);
+    let feedback = "";
+    if (finalScore >= 85) {
+      feedback = holdPassed 
+        ? "Excellent pose execution! Your alignment was nearly perfect and you maintained the pose well." 
+        : "Excellent alignment! Focus on holding the pose for the full duration to maximize your score.";
+    } else if (finalScore >= 70) {
+      feedback = holdPassed
+        ? "Good pose execution! Minor adjustments in alignment could improve your form further."
+        : "Good alignment! Work on maintaining the pose for the full duration to improve your score.";
+    } else if (finalScore >= 55) {
+      feedback = holdPassed
+        ? "Fair pose execution. Focus on improving alignment in the key areas mentioned below."
+        : "Fair alignment. Focus on both improving your form and holding the pose longer.";
+    } else {
+      feedback = holdPassed
+        ? "Need improvement. Review the corrections below and focus on alignment."
+        : "Need improvement. Work on both alignment and holding the pose for the full duration.";
+    }
+    
+    // Add top deviations if available and score is not excellent
+    if (finalScore < 85 && top3.length > 0) {
+      feedback += ` Top deviations: ${top3.join(', ')}.`;
+    }
 
     // Generate corrective tips from last detected angles if available
     let tips = null;
@@ -294,17 +380,21 @@ function App() {
         const RUN_MS = 30000;
         const start = Date.now();
         setActiveRun(true);
+        setRunProgress(0);
 
         if (runTimerRef.current) clearInterval(runTimerRef.current);
         runTimerRef.current = setInterval(() => {
           const remaining = Math.max(0, RUN_MS - (Date.now() - start));
           setCountdownLabel(`Hold: ${Math.ceil(remaining/1000)}s`);
+          const elapsed = RUN_MS - remaining;
+          setRunProgress(Math.min(1, elapsed / RUN_MS));
           if (remaining <= 0) {
             clearInterval(runTimerRef.current);
             runTimerRef.current = null;
             setActiveRun(false);
             setIsCountingDown(false);
             setCountdownLabel('Done');
+            setRunProgress(1);
             setTimeout(() => finishLevelRun(), 300);
           }
         }, 300);
@@ -313,63 +403,182 @@ function App() {
   }, [camera, resetLevelState, finishLevelRun, activeRun, isCountingDown]);
 
   const downloadResults = useCallback(() => {
-    const payload = {
-      timestamp: new Date().toISOString(),
-      results
-    };
-    const blob = new Blob([JSON.stringify(payload, null, 2)], {type: "application/json"});
-    const url = URL.createObjectURL(blob);
+    // Render a simple JPG summary using a canvas so no external libs are needed
+    const W = 1080;
+    const H = 1400;
+    const pad = 40;
+    const lineH = 44;
+
+    const canvas = document.createElement('canvas');
+    canvas.width = W;
+    canvas.height = H;
+    const ctx = canvas.getContext('2d');
+
+    // background
+    ctx.fillStyle = '#f2fff7';
+    ctx.fillRect(0, 0, W, H);
+
+    // header
+    ctx.fillStyle = '#1f7a55';
+    ctx.font = 'bold 48px Segoe UI, Arial';
+    ctx.fillText('POSEPERFECT — Results', pad, pad + 48);
+
+    // date
+    ctx.fillStyle = '#4a6b5a';
+    ctx.font = 'normal 20px Segoe UI, Arial';
+    ctx.fillText(new Date().toLocaleString(), pad, pad + 80);
+
+    // overall score
+    const completed = results.filter(r => r && typeof r.score === 'number');
+    const avg = completed.length ? Math.round(completed.reduce((a, r) => a + r.score, 0) / completed.length) : 0;
+    ctx.fillStyle = '#184b34';
+    ctx.font = 'bold 34px Segoe UI, Arial';
+    ctx.fillText(`Overall score: ${avg}`, pad, pad + 130);
+
+    // table header
+    let y = pad + 190;
+    ctx.font = 'bold 22px Segoe UI, Arial';
+    ctx.fillStyle = '#245d43';
+    ctx.fillText('Level', pad, y);
+    ctx.fillText('Aāsanam', pad + 140, y);
+    ctx.fillText('Score', W - pad - 160, y);
+    y += 10;
+    ctx.fillStyle = '#a7f3cc';
+    ctx.fillRect(pad, y, W - pad * 2, 2);
+    y += 30;
+
+    // rows
+    ctx.font = 'normal 22px Segoe UI, Arial';
+    for (let i = 0; i < LEVELS.length; i++) {
+      const r = results[i];
+      const levelId = LEVELS[i].id;
+      const name = LEVELS[i].name;
+      const score = r && typeof r.score === 'number' ? r.score.toString() : '—';
+
+      // row bg
+      ctx.fillStyle = i % 2 === 0 ? '#e9fff2' : '#ffffff';
+      ctx.fillRect(pad, y - 24, W - pad * 2, 36);
+
+      ctx.fillStyle = '#234';
+      ctx.fillText(String(levelId), pad, y);
+
+      ctx.fillStyle = '#2a6a4a';
+      ctx.fillText(name, pad + 140, y);
+
+      ctx.fillStyle = '#093';
+      ctx.fillText(score, W - pad - 160, y);
+
+      y += lineH;
+    }
+
+    // footer
+    ctx.fillStyle = '#6c757d';
+    ctx.font = 'normal 18px Segoe UI, Arial';
+    ctx.fillText('Generated by POSEPERFECT — runs in browser', pad, H - pad);
+
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
     const a = document.createElement('a');
-    a.href = url;
-    a.download = 'poseyoga-results.json';
+    a.href = dataUrl;
+    a.download = 'poseyoga-results.jpg';
     document.body.appendChild(a);
     a.click();
     a.remove();
-    URL.revokeObjectURL(url);
   }, [results]);
 
   // Navigation handlers
   const handleStart = () => {
+    resetLevelState();
     setCurrentLevelIndex(0);
     setResults([]);
+    setPlayMode('sequence');
     setScreen('level');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  const handleExplore = useCallback(() => {
+    stopCamera();
+    resetLevelState();
+    setResults([]);
+    setPlayMode('explore');
+    setScreen('explore');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [resetLevelState, stopCamera]);
+
+  const handleExploreSelect = useCallback((index) => {
+    resetLevelState();
+    setResults([]);
+    setCurrentLevelIndex(index);
+    setPlayMode('single');
+    setScreen('level');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [resetLevelState]);
+
+  const handleBackToExplore = useCallback(() => {
+    stopCamera();
+    resetLevelState();
+    setPlayMode('explore');
+    setScreen('explore');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [resetLevelState, stopCamera]);
+
   const handleNextLevel = () => {
+    if (playMode === 'single') {
+      handleBackToExplore();
+      return;
+    }
     if (currentLevelIndex >= LEVELS.length - 1) {
       setScreen('final');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     } else {
       setCurrentLevelIndex(prev => prev + 1);
       setScreen('level');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
 
   const handleSkipLevel = () => {
     // block skipping while countdown or run is active
     if (activeRun || isCountingDown) return;
+    if (playMode === 'single') {
+      handleBackToExplore();
+      return;
+    }
     // immediately move to next level without recording a score
     if (currentLevelIndex >= LEVELS.length - 1) {
       setScreen('final');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     } else {
       setCurrentLevelIndex(prev => prev + 1);
       setScreen('level');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
 
   const handleRetry = () => {
+    resetLevelState();
     setScreen('level');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const handleExit = () => {
+  const handleGoHome = useCallback(() => {
     stopCamera();
+    resetLevelState();
+    setPlayMode('sequence');
     setScreen('landing');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [resetLevelState, stopCamera]);
+
+  const handleExit = () => {
+    handleGoHome();
   };
 
   const handleRestart = () => {
     setResults([]);
     setCurrentLevelIndex(0);
     stopCamera();
+    setPlayMode('sequence');
     setScreen('landing');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   // Render the appropriate screen
@@ -377,15 +586,27 @@ function App() {
     <div className="container">
       <header>
         <div>
-          <h1>PoseYoga</h1>
-          <div className="subtitle">Levels • Hold 30s • Light-green, friendly UI</div>
+          <h1>POSEPERFECT</h1>
+          <div className="subtitle">Improve your posture</div>
         </div>
-        <div className="subtitle">Relaxed practice • AI-assisted</div>
+        <div className="subtitle">
+          {screen !== 'landing' && (
+            <button className="header-home-btn" onClick={handleGoHome}>Home</button>
+          )}
+        </div>
       </header>
 
       <main id="app">
         {screen === 'landing' && (
-          <Landing onStart={handleStart} />
+          <Landing onStart={handleStart} onExplore={handleExplore} />
+        )}
+
+        {screen === 'explore' && (
+          <ExploreScreen
+            levels={LEVELS}
+            onSelectPose={handleExploreSelect}
+            onBack={handleExit}
+          />
         )}
 
         {screen === 'level' && (
@@ -405,6 +626,7 @@ function App() {
             disableBegin={isCountingDown || activeRun}
             showStartCamera={!camera}
             poseData={currentPoseData}
+            runProgress={runProgress}
             onVideoLoad={(video) => {
               if (video) {
                 const overlay = document.getElementById('overlay');
@@ -426,7 +648,9 @@ function App() {
             tips={results[currentLevelIndex].tips}
             poseName={LEVELS[currentLevelIndex].name}
             perJoint={results[currentLevelIndex].perJoint}
-            onNext={handleNextLevel}
+            onNext={playMode === 'single' ? handleBackToExplore : handleNextLevel}
+            nextLabel={playMode === 'single' ? 'Back to Explore' : 'Next Level'}
+            showNext={true}
             onRetry={handleRetry}
             onExit={handleExit}
           />

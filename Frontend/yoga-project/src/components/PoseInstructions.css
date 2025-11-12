@@ -4,7 +4,8 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.7);
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(5px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -13,13 +14,16 @@
 }
 
 .pose-instruction-card {
-  background: var(--card);
+  background: var(--glass-bg);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid var(--glass-border);
   border-radius: var(--radius);
-  padding: 20px;
+  padding: 28px;
   width: 90%;
-  max-width: 400px;
-  box-shadow: var(--shadow);
-  animation: slideUp 0.3s ease-out;
+  max-width: 450px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+  animation: scaleIn 0.4s ease-out;
 }
 
 .instruction-header {
@@ -36,14 +40,28 @@
 }
 
 .close-btn {
-  background: none;
-  border: none;
-  font-size: 24px;
-  color: var(--muted);
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  font-size: 20px;
+  color: var(--accent-text);
   cursor: pointer;
   padding: 0;
   margin: 0;
   line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+}
+
+.close-btn:hover {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: rgba(239, 68, 68, 0.4);
+  transform: rotate(90deg) scale(1.1);
 }
 
 .instruction-content {
@@ -54,23 +72,57 @@
 
 .acknowledge-btn {
   width: 100%;
-  background: linear-gradient(180deg, var(--accent-2), var(--accent));
+  background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
   border: none;
-  padding: 12px;
-  border-radius: 8px;
-  color: var(--accent-text);
-  font-weight: bold;
+  padding: 14px 24px;
+  border-radius: 50px;
+  color: white;
+  font-weight: 700;
+  font-size: 16px;
   cursor: pointer;
-  transition: transform 0.2s;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4);
+  position: relative;
+  overflow: hidden;
+}
+
+.acknowledge-btn::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.3);
+  transform: translate(-50%, -50%);
+  transition: width 0.6s, height 0.6s;
+}
+
+.acknowledge-btn:hover::before {
+  width: 400px;
+  height: 400px;
 }
 
 .acknowledge-btn:hover {
-  transform: translateY(-1px);
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 8px 25px rgba(59, 130, 246, 0.6);
 }
 
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 @keyframes slideUp {

@@ -16,7 +16,8 @@ const LevelScreen = ({
   showStartCamera,
   poseFeedback = '',
   onVideoLoad,
-  livePerJoint = []
+  livePerJoint = [],
+  runProgress = 0
 }) => {
   const videoRef = useRef(null);
   const overlayRef = useRef(null);
@@ -74,6 +75,13 @@ const LevelScreen = ({
             <button className="btn" onClick={onRetryLevel}>Reset</button>
             <button className="btn" onClick={onSkipLevel} disabled={disableBegin}>Skip Level</button>
             <div className="countdown">{countdownLabel}</div>
+          </div>
+
+          <div className="countdown-progress" aria-hidden="true">
+            <div
+              className="countdown-progress-bar"
+              style={{ width: `${Math.min(100, Math.max(0, runProgress * 100))}%` }}
+            />
           </div>
 
           <div className="tiny muted">

@@ -1,20 +1,21 @@
 import React from 'react';
 import yogaImg from '../assets/yoga.jpg';
 
-const Landing = ({ onStart }) => {
+const Landing = ({ onStart, onExplore }) => {
   return (
     <section className="landing-hero">
       <div className="hero-card">
         <div className="hero-content">
           <div className="hero-pill">Home</div>
-          <h1 className="hero-title">PoseYogo</h1>
+          <h1 className="hero-title">POSEPERFECT</h1>
           <p className="hero-subtitle">
             You cannot always control what goes on outside<br />
             But you can control what goes on inside.<br />
-            Improve your posture and alignment with PoseYoga.
+            Improve your posture and alignment with POSEPERFECT.
           </p>
           <div className="cta-row">
             <button className="btn-primary" onClick={onStart}>Get Started</button>
+            <button className="btn-outline" onClick={onExplore}>Explore Poses</button>
           </div>
         </div>
         <div className="hero-illustration" aria-hidden="true">
