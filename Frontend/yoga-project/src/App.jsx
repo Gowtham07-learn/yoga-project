@@ -21,13 +21,6 @@ function App() {
   const [countdownLabel, setCountdownLabel] = useState('Ready');
   const [isCountingDown, setIsCountingDown] = useState(false);
   const [liveTips, setLiveTips] = useState('');
-
-  // Refs to avoid stale closures inside onResults
-  const activeRunRef = useRef(false);
-  const levelIndexRef = useRef(0);
-  const simSumRef = useRef(0);
-  const frameCountRef = useRef(0);
-  const inPoseCountRef = useRef(0);
   
   // State for tracking pose data
   const [framesSimilarity, setFramesSimilarity] = useState([]);
@@ -39,7 +32,6 @@ function App() {
   const [jointAngleAcc, setJointAngleAcc] = useState({});
   const [livePerJoint, setLivePerJoint] = useState([]);
   const liveWindowRef = useRef({ startMs: 0, sums: {} });
-  const liveTipsWindowRef = useRef({ startMs: 0, counts: {} });
 
   const frameSmoothing = 6;
   const holdRequirementPct = 0.70;
@@ -49,70 +41,16 @@ function App() {
   const runTimerRef = useRef(null);
   const poseRef = useRef(null);
 
-  // keep refs in sync
-  useEffect(() => { activeRunRef.current = activeRun; }, [activeRun]);
-  useEffect(() => { levelIndexRef.current = currentLevelIndex; }, [currentLevelIndex]);
-
   const onResults = useCallback((results) => {
     if (!results.poseLandmarks) {
       setLiveSim('—');
       setCurrentPoseData(null);
-      // clear overlay when no landmarks
-      const canvas = document.getElementById('overlay');
-      if (canvas) {
-        const ctx = canvas.getContext('2d');
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-      }
       return;
     }
 
     const angles = poseAngles(results.poseLandmarks);
-    const levelRef = LEVELS[levelIndexRef.current];
+    const levelRef = LEVELS[currentLevelIndex];
     const simData = computeSimilarityMap(angles, levelRef);
-
-    // draw skeleton overlay (no external utils)
-    const canvas = document.getElementById('overlay');
-    if (canvas && results.poseLandmarks) {
-      const ctx = canvas.getContext('2d');
-      const W = canvas.width;
-      const H = canvas.height;
-      ctx.clearRect(0, 0, W, H);
-
-      // minimal set of connections for upper/lower body
-      const C = [
-        [11,12], // shoulders
-        [23,24], // hips
-        [11,23], // left side
-        [12,24], // right side
-        [11,13],[13,15], // left arm
-        [12,14],[14,16], // right arm
-        [23,25],[25,27], // left leg
-        [24,26],[26,28]  // right leg
-      ];
-
-      ctx.lineWidth = 4;
-      ctx.strokeStyle = '#20c997';
-      ctx.lineCap = 'round';
-      for (const [a,b] of C) {
-        const p = results.poseLandmarks[a];
-        const q = results.poseLandmarks[b];
-        if (!p || !q) continue;
-        ctx.beginPath();
-        ctx.moveTo(p.x * W, p.y * H);
-        ctx.lineTo(q.x * W, q.y * H);
-        ctx.stroke();
-      }
-
-      ctx.fillStyle = '#51cf66';
-      const points = [11,12,13,14,15,16,23,24,25,26,27,28];
-      for (const i of points) {
-        const p = results.poseLandmarks[i];
-        if (!p) continue;
-        ctx.beginPath();
-        ctx.arc(p.x * W, p.y * H, 3, 0, Math.PI * 2);
-        ctx.fill();
-      }
-    }
     
     // Update current pose data for feedback
     setCurrentPoseData({
@@ -121,32 +59,9 @@ function App() {
       similarity: simData
     });
 
-    // Live corrective tips (throttled to ~1s, pick most frequent message in window)
+    // Live corrective tips (updates continuously)
     const correction = getPoseCorrectionMessage(angles, levelRef);
-    const nowTs = Date.now();
-    if (!liveTipsWindowRef.current.startMs) {
-      liveTipsWindowRef.current.startMs = nowTs;
-      liveTipsWindowRef.current.counts = {};
-    }
-    if (correction?.message) {
-      const key = correction.message;
-      const counts = liveTipsWindowRef.current.counts;
-      counts[key] = (counts[key] || 0) + 1;
-    }
-    if (nowTs - liveTipsWindowRef.current.startMs >= 1000) {
-      const counts = liveTipsWindowRef.current.counts;
-      let best = '';
-      let bestC = 0;
-      for (const k in counts) {
-        if (counts[k] > bestC) {
-          best = k;
-          bestC = counts[k];
-        }
-      }
-      setLiveTips(best);
-      liveTipsWindowRef.current.startMs = nowTs;
-      liveTipsWindowRef.current.counts = {};
-    }
+    setLiveTips(correction ? correction.message : '');
 
     // Update joint differences
     setJointDiffAcc(prev => {
@@ -212,26 +127,25 @@ function App() {
       liveWindowRef.current.startMs = now;
       liveWindowRef.current.sums = {};
     }
-    if (activeRunRef.current) {
-      // Use raw similarity for scoring (stable, avoids state timing issues)
-      const smooth = simData.overall;
-      // still keep a short rolling window for potential UI smoothing
-      setSimRolling(prev => [...prev, simData.overall].slice(-frameSmoothing));
+    if (activeRun) {
+      let smooth = simData.overall;
+      setSimRolling(prev => {
+        const newRolling = [...prev, simData.overall].slice(-frameSmoothing);
+        if (newRolling.length > 0) {
+          smooth = newRolling.reduce((a,b) => a+b, 0) / newRolling.length;
+        }
+        return newRolling;
+      });
 
       setFramesSimilarity(prev => [...prev, smooth]);
-      // update robust refs
-      frameCountRef.current += 1;
-      if (smooth >= 0.70) inPoseCountRef.current += 1;
-      simSumRef.current += smooth;
-      // reflect in UI
-      setTotalFrames(frameCountRef.current);
-      setInPoseFrames(inPoseCountRef.current);
+      setTotalFrames(prev => prev + 1);
+      if (smooth >= 0.70) setInPoseFrames(prev => prev + 1);
       setLiveSim(Math.round(smooth * 100).toString());
-      setHoldPct(Math.round((inPoseCountRef.current / Math.max(1, frameCountRef.current)) * 100).toString());
+      setHoldPct(Math.round((inPoseFrames / Math.max(1, totalFrames)) * 100).toString());
     } else {
       setLiveSim(Math.round(simData.overall * 100).toString());
     }
-  }, [frameSmoothing, setCurrentPoseData]);
+  }, [activeRun, currentLevelIndex, frameSmoothing, inPoseFrames, simRolling, totalFrames, setCurrentPoseData]);
 
   // MediaPipe setup (after onResults is defined so it's available for dependency and binding)
   const setupPose = useCallback(async () => {
@@ -255,15 +169,8 @@ function App() {
   }, [onResults]);
 
   const startCamera = useCallback(async (videoRef) => {
-    if (!videoRef) return;
+    if (camera || !videoRef) return;
     const poseInstance = await setupPose();
-
-    // If a previous camera exists, stop it before rebinding to the new video element
-    if (camera) {
-      try { camera.stop(); } catch {}
-      setCamera(null);
-    }
-
     const newCamera = new window.Camera(videoRef, {
       onFrame: async () => {
         if (poseRef.current) {
@@ -284,7 +191,6 @@ function App() {
     }
   }, [camera, setupPose]);
 
-
   const stopCamera = useCallback(() => {
     if (camera) {
       camera.stop();
@@ -304,24 +210,17 @@ function App() {
     setTotalFrames(0);
     setJointDiffAcc({});
     setJointCountAcc({});
-    setJointAngleAcc({});
     setActiveRun(false);
     setCountdownLabel('Ready');
     setLiveSim('—');
     setHoldPct('0');
-    // reset live averaging windows
-    liveWindowRef.current = { startMs: 0, sums: {} };
-    liveTipsWindowRef.current = { startMs: 0, counts: {} };
-    // reset scoring refs
-    simSumRef.current = 0;
-    frameCountRef.current = 0;
-    inPoseCountRef.current = 0;
   }, []);
 
   const finishLevelRun = useCallback(() => {
-    const avgSim = frameCountRef.current > 0 ? (simSumRef.current / frameCountRef.current) : 0;
+    const avgSim = framesSimilarity.length ? 
+      (framesSimilarity.reduce((a,b) => a+b, 0) / framesSimilarity.length) : 0;
     const percent = Math.round(avgSim * 100);
-    const holdPctActual = inPoseCountRef.current / Math.max(1, frameCountRef.current);
+    const holdPctActual = inPoseFrames / Math.max(1, totalFrames);
     const holdPassed = holdPctActual >= holdRequirementPct;
 
     let finalScore = percent;
@@ -370,7 +269,7 @@ function App() {
       return newResults;
     });
     setScreen('score');
-  }, [currentLevelIndex, jointDiffAcc, jointCountAcc, currentPoseData, jointAngleAcc]);
+  }, [currentLevelIndex, framesSimilarity, inPoseFrames, jointDiffAcc, jointCountAcc, totalFrames, currentPoseData, jointAngleAcc]);
 
   const startPoseRun = useCallback(() => {
     if (!camera) {
@@ -414,86 +313,19 @@ function App() {
   }, [camera, resetLevelState, finishLevelRun, activeRun, isCountingDown]);
 
   const downloadResults = useCallback(() => {
-    // Render a simple JPG summary using a canvas so no external libs are needed
-    const W = 1080;
-    const H = 1400;
-    const pad = 40;
-    const lineH = 44;
-
-    const canvas = document.createElement('canvas');
-    canvas.width = W;
-    canvas.height = H;
-    const ctx = canvas.getContext('2d');
-
-    // background
-    ctx.fillStyle = '#f2fff7';
-    ctx.fillRect(0, 0, W, H);
-
-    // header
-    ctx.fillStyle = '#1f7a55';
-    ctx.font = 'bold 48px Segoe UI, Arial';
-    ctx.fillText('Yogo pose — Results', pad, pad + 48);
-
-    // date
-    ctx.fillStyle = '#4a6b5a';
-    ctx.font = 'normal 20px Segoe UI, Arial';
-    ctx.fillText(new Date().toLocaleString(), pad, pad + 80);
-
-    // overall score
-    const completed = results.filter(r => r && typeof r.score === 'number');
-    const avg = completed.length ? Math.round(completed.reduce((a, r) => a + r.score, 0) / completed.length) : 0;
-    ctx.fillStyle = '#184b34';
-    ctx.font = 'bold 34px Segoe UI, Arial';
-    ctx.fillText(`Overall score: ${avg}`, pad, pad + 130);
-
-    // table header
-    let y = pad + 190;
-    ctx.font = 'bold 22px Segoe UI, Arial';
-    ctx.fillStyle = '#245d43';
-    ctx.fillText('Level', pad, y);
-    ctx.fillText('Aāsanam', pad + 140, y);
-    ctx.fillText('Score', W - pad - 160, y);
-    y += 10;
-    ctx.fillStyle = '#a7f3cc';
-    ctx.fillRect(pad, y, W - pad * 2, 2);
-    y += 30;
-
-    // rows
-    ctx.font = 'normal 22px Segoe UI, Arial';
-    for (let i = 0; i < LEVELS.length; i++) {
-      const r = results[i];
-      const levelId = LEVELS[i].id;
-      const name = LEVELS[i].name;
-      const score = r && typeof r.score === 'number' ? r.score.toString() : '—';
-
-      // row bg
-      ctx.fillStyle = i % 2 === 0 ? '#e9fff2' : '#ffffff';
-      ctx.fillRect(pad, y - 24, W - pad * 2, 36);
-
-      ctx.fillStyle = '#234';
-      ctx.fillText(String(levelId), pad, y);
-
-      ctx.fillStyle = '#2a6a4a';
-      ctx.fillText(name, pad + 140, y);
-
-      ctx.fillStyle = '#093';
-      ctx.fillText(score, W - pad - 160, y);
-
-      y += lineH;
-    }
-
-    // footer
-    ctx.fillStyle = '#6c757d';
-    ctx.font = 'normal 18px Segoe UI, Arial';
-    ctx.fillText('Generated by Yogo pose — runs in browser', pad, H - pad);
-
-    const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
+    const payload = {
+      timestamp: new Date().toISOString(),
+      results
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], {type: "application/json"});
+    const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = dataUrl;
-    a.download = 'poseyoga-results.jpg';
+    a.href = url;
+    a.download = 'poseyoga-results.json';
     document.body.appendChild(a);
     a.click();
     a.remove();
+    URL.revokeObjectURL(url);
   }, [results]);
 
   // Navigation handlers
@@ -545,10 +377,10 @@ function App() {
     <div className="container">
       <header>
         <div>
-          <h1>Yogo pose</h1>
-          <div className="subtitle">Improve your posture</div>
+          <h1>PoseYoga</h1>
+          <div className="subtitle">Levels • Hold 30s • Light-green, friendly UI</div>
         </div>
-        <div className="subtitle"></div>
+        <div className="subtitle">Relaxed practice • AI-assisted</div>
       </header>
 
       <main id="app">
