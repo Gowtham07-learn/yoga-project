@@ -1,85 +1,125 @@
-# PoseYoga — Prototype
+# PoseYoga 🧘‍♀️
 
-Lightweight browser prototype for posture / yoga pose feedback using MediaPipe Pose.
+> Intelligent, real-time browser yoga pose guidance and posture analysis powered by on-device MediaPipe AI.
 
-This repository contains a small frontend app (Vite + React) that ported a vanilla JS prototype into React components. The app uses the MediaPipe Pose library (loaded via CDN in `index.html`) to estimate landmarks and compute a similarity score against reference poses.
+PoseYoga is a modern web application built with React and Vite that provides interactive yoga practice with instant visual and audio posture corrections. All vision processing is executed 100% locally on your device using WebAssembly and WebGL—no webcam video or sensitive data ever leaves your computer.
 
-## Contents
+---
 
-- `Frontend/yoga-project/` — React frontend (Vite). This is the runnable app. The main entry is `src/main.jsx` and `src/App.jsx`.
-- `index.html` — Vite index (includes MediaPipe CDN scripts in the head).
-- `script.js`, `styles.css` — original prototype source (kept for reference in the repo root if present).
+## ✨ Features
 
-## Quick start (frontend)
+- **On-Device Vision AI**: Powered by `@mediapipe/tasks-vision` running WebAssembly locally.
+- **Aspect-Corrected Geometry**: Computes precise Euclidean joint angles in screen space, avoiding normalized aspect-ratio distortion.
+- **Mirrored Side Detection**: Poses like Tree Pose and Warrior II automatically score whichever leg or arm side you perform.
+- **Pre-Flight Full Body Check**: Verifies that your full silhouette (head, shoulders, hips, knees, and ankles) is in view before timing begins.
+- **Continuous Hold Verification**: Hold timer only advances when you actively maintain the posture above the similarity threshold.
+- **Accurate Directional Feedback**: Natural language cues pointing in the correct anatomical direction (e.g., "Bend your front knee deeper", "Raise your left arm higher"), prioritized by relative error (`diff / tolerance`).
+- **Zero Flickering Guidance**: Debounced hints require errors to persist before alerting, avoiding single-frame jitter.
+- **Voice Guidance**: Real-time spoken countdowns, encouragement, and posture reminders via the Web Speech API.
+- **Self-Hosted Vector Illustrations**: High-resolution, offline SVG illustrations for every pose—no external third-party hotlinking or copyright risks.
+- **Progressive Curriculum & Persistence**: 5 curated poses with level gating, personal best tracking, and practice history stored locally in `localStorage`.
+- **Accessible & Responsive**: High-contrast color tokens, keyboard navigation, visible focus indicators, and mobile-friendly layouts.
 
-1. Open a terminal and change directory to the frontend project:
+---
 
-```bash
-cd "Frontend/yoga-project"
+## 🗂️ Project Structure
+
+```text
+yoga-project/
+├── .gitignore                      # Root gitignore excluding dependencies and secrets
+├── README.md                       # Repository documentation
+└── Frontend/
+    └── yoga-project/               # Core React application (Vite)
+        ├── public/
+        │   ├── models/             # MediaPipe task models
+        │   ├── poses/              # Self-hosted SVG pose illustrations
+        │   └── wasm/               # Self-hosted MediaPipe WebAssembly binaries
+        ├── src/
+        │   ├── components/         # Clean React UI components
+        │   │   ├── FinalScreen.jsx # Session summary & confetti celebration
+        │   │   ├── Landing.jsx     # Value proposition & curriculum selector
+        │   │   ├── LevelScreen.jsx # Practice canvas, skeleton & real-time checklist
+        │   │   ├── ScoreScreen.jsx # Animated score & joint breakdown
+        │   │   └── SettingsModal.jsx # Camera, hold time, and difficulty controls
+        │   ├── data/
+        │   │   └── levels.js       # Target angles, tolerances, tips & benefits
+        │   ├── hooks/              # Custom modular lifecycle hooks
+        │   │   ├── useCamera.js    # Camera stream lifecycle & permission errors
+        │   │   ├── useHoldTimer.js # Continuous hold timer with tab pause
+        │   │   ├── usePoseLandmarker.js # MediaPipe pose detection pipeline
+        │   │   └── useVoiceGuidance.js  # Web Speech synthesis
+        │   ├── utils/
+        │   │   ├── poseFeedback.js # Normalized hint prioritization & debounce
+        │   │   ├── poseUtils.js    # Mathematical geometry & skeleton rendering
+        │   │   └── poseUtils.test.js # Unit tests for math and feedback logic
+        │   ├── App.jsx             # Main application state orchestrator
+        │   ├── index.css           # Modern design system & accessible styles
+        │   └── main.jsx            # React root mount
+        ├── .env.example            # Environment configuration template
+        ├── eslint.config.js        # Modern ESLint configuration
+        ├── package.json            # Scripts and dependencies
+        └── vite.config.js          # Vite build configuration
 ```
 
-2. Install dependencies (run once):
+---
+
+## 🚀 Quick Start
+
+### 1. Prerequisites
+
+- [Node.js](https://nodejs.org/) (version 18+ recommended)
+- A modern web browser (Chrome, Brave, Edge, Firefox, or Safari) with webcam access
+
+### 2. Install Dependencies
+
+Navigate into the frontend directory:
 
 ```bash
+cd Frontend/yoga-project
 npm install
 ```
 
-3. Start the dev server:
+### 3. Run Development Server
 
 ```bash
 npm run dev
 ```
 
-4. Open the site in your browser. Vite normally serves at `http://localhost:5173` but if that port is taken it may fallback to another port (check terminal output).
+Open your browser to `http://localhost:5173` (or the URL displayed in your terminal).
 
-Notes:
-- The app uses MediaPipe via CDN (scripts are included in `index.html`).
-- For local environment overrides, create a `.env.local` inside `Frontend/yoga-project` (this repo includes a `.env` template).
-
-## Environment variables
-
-Vite exposes only variables prefixed with `VITE_`. The repo contains `Frontend/yoga-project/.env` as a template. Do not commit secrets; for local secrets use `.env.local` which is ignored by `.gitignore`.
-
-## Git / housekeeping
-
-- `.gitignore` at repo root excludes `node_modules`, `dist`/`build`, `.env*`, editor files, OS junk, etc.
-- If `node_modules` was previously committed, untrack them once with:
+### 4. Build for Production
 
 ```bash
-# from repo root
-git rm -r --cached node_modules
-git rm -r --cached Frontend/yoga-project/node_modules
-git add .gitignore
-git commit -m "Remove node_modules from tracking"
-git push
+npm run build
 ```
 
-## MediaPipe
-
-The project uses the MediaPipe Pose JS package via CDN. `index.html` includes:
-
-```html
-<script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
-```
-
-No API keys are required.
-
-## How I validated
-
-- Converted the original vanilla app layout and styling into `src/App.jsx` and `src/App.css`.
-- Wired MediaPipe initialization in the React app and preserved DOM IDs used by the logic (video `id="videoElement"`, `canvas id="overlay"`).
-
-## Next steps (optional)
-
-- Add `.env.example` instead of `.env` to avoid accidental secret commits.
-- Add automated tests or a small demo recording option.
+This generates an optimized production bundle inside `Frontend/yoga-project/dist/`.
 
 ---
 
-If you want, I can also:
-- Create `README` inside the frontend folder with frontend-specific notes.
-- Run the git commit + push now (I will stage `README.md`, commit it, and push to the current branch).
+## 🧪 Testing & Code Quality
 
-Tell me if you want me to proceed with committing and pushing this README now (I can push to `dharaneesh` as your current branch).
+Run the unit test suite covering 2D angle geometry, visibility checks, hint direction logic, and tolerance prioritization:
+
+```bash
+npm run test
+```
+
+Run static analysis and linting:
+
+```bash
+npm run lint
+```
+
+---
+
+## 🔒 Privacy & Permissions
+
+- **Camera Data**: Video frames are captured directly by your browser and processed in-memory using WebAssembly. No image or video stream is ever transmitted over the network or saved to any server.
+- **HTTPS Requirement**: Modern browsers require an encrypted context (`https://` or `localhost`) to grant webcam access.
+
+---
+
+## 📄 License
+
+MIT License. Free for personal, educational, and commercial use.
